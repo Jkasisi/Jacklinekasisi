@@ -1,0 +1,166 @@
+
+library(tidyverse)
+
+library(dplyr)
+
+### Multilateral Development Institution Data
+foo <- read.csv("https://tinyurl.com/yb4phxx8") # read in the data
+
+# column names
+names(foo)
+
+# dimensions of the data set
+dim(foo)
+
+# quick look at the data structure
+head(foo)
+
+# take note of the columns representing calendar dates
+date.columns <- c(11, 12, 14, 15, 16, 17, 18, 25)
+
+
+# Data Processing : Changing blanks to NA, and convert te colums in data.colums to dates, so R can recognize them as dates 
+
+
+for(i in date.columns)  # this "for loop" only loops through the "date.columns"
+  
+{# Find missing values
+  which_values_are_missing <- which(as.character(foo[, i]) == "")
+  
+  # Replace them by NAs
+  foo[which_values_are_missing, i] <- NA
+  
+   # Turn values into dates, so that the dates items in the data.colums are no longer identified as factors. Help to simplify the arithmetic calculation of the dates  
+  foo[, i] <- as.Date(as.character(foo[, i]))
+  
+}
+
+
+## Taking into consideration only projects with non missing "Circulation Date >= "2009-01-01"
+library(dplyr)
+new_foo<-mutate(foo)
+which.have.NAs <- which(is.na(new_foo$CirculationDate == TRUE))
+new_foo<-new_foo[-which.have.NAs,]
+to_be_excluded <- which(new_foo$CirculationDate < as.Date("2009-01-01"))
+new_foo<-new_foo[-to_be_excluded,]
+
+
+# Creating a new column containing the duration at approval which is the difference between the original completion date and the approval date.
+new_foo$PlannedDuration <- new_foo$OriginalCompletionDate - new_foo$ApprovalDate
+new_foo$PlannedDuration[is.na(new_foo$PlannedDuration)] <- 0
+
+mean(new_foo$PlannedDuration)
+
+sd(new_foo$PlannedDuration)
+
+quantile(new_foo$PlannedDuration)
+
+median(new_foo$PlannedDuration)
+
+t.test(new_foo$PlannedDuration, mu=730, alternative="less", conf.level=0.95)
+
+
+
+
+
+#creating a new column for the project delay. The difference between "OriginalCompletionDate" and "RevisedCompletionDate"
+new_foo$ProjectDelay <- new_foo$RevisedCompletionDate - new_foo$OriginalCompletionDate
+new_foo$ProjectDelay[is.na(new_foo$ProjectDelay)] <- 0
+
+mean(new_foo$ProjectDelay)
+median(new_foo$ProjectDelay)
+quantile(new_foo$ProjectDelay)
+
+#plotting the delay compared to the circulation date
+#ggplot(new_foo$ProjectDelay, aes(x = CirculationDate, y = ProjectDelay)) + geom_point()
+
+library(ggplot2)
+#plotting the delay compared to the circulation date
+ggplot(new_foo, aes(x = CirculationDate, y = ProjectDelay)) + geom_point()
+
+
+
+
+#creating a new column for the Actual project duration. the difference between "Approval Date" and "Revised Completion Date"
+new_foo$actualprojectduration <- new_foo$RevisedCompletionDate - new_foo$ApprovalDate
+new_foo$actualprojectduration[is.na(new_foo$actualprojectduration)] <- 0
+
+#evalution of actual Project Duration
+mean(new_foo$actualprojectduration)
+median(new_foo$actualprojectduration)
+quantile(new_foo$actualprojectduration)
+
+
+
+#create new data set containing projects that were completed from 2010 to now.
+
+mutate(new_foo)
+to_be_excluded <- which(new_foo$CirculationDate < as.Date("2010-01-01"))
+new_foo<-new_foo[-to_be_excluded,]
+
+
+#finding the percentages of each rating for the projects completed after 2010
+table(new_foo$Rating)
+table(new_foo$Rating) / sum(table(new_foo$Rating))
+
+
+
+#create new data set containing projects that have Type PATA.
+
+mutate(new_foo)
+to_be_excluded <- which(new_foo$Type != 'PATA')
+
+new_foo<-new_foo[-to_be_excluded,]
+
+
+#finding the percentages of each rating for PATA projects completed after 2010
+table(new_foo$Rating)
+table(new_foo$Rating) / sum(table(new_foo$Rating))
+
+
+#getting the top 10% and the bottom 10% of projects by revised amount
+topRevised <- new_foo[new_foo$RevisedAmount > quantile(new_foo$RevisedAmount, prob = c(0.9)),]
+bottomRevised <- new_foo[new_foo$RevisedAmount < quantile(new_foo$RevisedAmount, prob = c(0.1), na.rm = TRUE),]
+
+
+#finding the percentages of each rating for Top 10% revised amount projects 
+table(topRevised$Rating)
+table(topRevised$Rating) / sum(table(topRevised$Rating))
+
+#finding the percentages of each rating for Bottom 10% revised amount projects
+table(bottomRevised$Rating)
+table(bottomRevised$Rating) / sum(table(bottomRevised$Rating))
+
+
+#getting mean, median, standard deviation, and quantile of the ratings for the top and bottom 10% of projects by revised amount
+mean(topRevised$Rating)
+median(topRevised$Rating)
+sd(topRevised$Rating)
+quantile(topRevised$Rating)
+
+
+#getting mean, median, standard deviation, and quantile of the ratings for the top and bottom 10% of projects by revised amount
+mean(topRevised$Rating)
+mean(bottomRevised$Rating, na.rm = TRUE)
+median(bottomRevised$Rating, na.rm = TRUE)
+sd(bottomRevised$Rating, na.rm = TRUE)
+quantile(bottomRevised$Rating, na.rm = TRUE)
+
+
+
+summary(topRevised)
+summary(bottomRevised)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
