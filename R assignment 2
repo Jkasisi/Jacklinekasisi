@@ -1,0 +1,237 @@
+#Question 1
+
+#data generation - a
+
+x <- rnorm(998,0,1)
+
+error_term<-rnorm(998,0,2)
+
+y <- -0.6*x+error_term
+
+data_1<-data.frame(x,y)
+
+summary(data_1)
+
+
+
+
+#regression model without outliers - b
+
+m1<-lm(y~x, data=data_1)
+
+summary(m1)
+
+
+#adding outlier a and b  to change slope to positive  - c
+
+a <-c(60,999)
+
+b <- c(80,998)
+
+data_2<-rbind(data_1,a,b)
+
+m2<-lm(y~x, data=data_2)
+
+summary(m2)
+
+
+# regression line visualization with and without outliers - d
+
+plot(x,y,data=data_2, xlab = "x", ylab = "y", main = "Regression line of y against x")
+
+abline(m1, col="Red")
+
+abline(m2, col="blue")
+
+
+
+
+
+library(Matching)
+
+library(dplyr)
+
+library(Hmisc)
+
+library(arm)
+
+data(lalonde)
+
+head(lalonde)
+
+lalonde_m1<-lm(re78~age + age^2 + educ + + treat + treat*age + re74 + re75 ,data=lalonde)
+
+summary(lalonde_m1)
+
+
+# getting the treatment unit
+
+lalonde_treat<-lalonde%>%filter(treat==1)
+
+#Creating a linear model
+
+lalonde_treat$age[17:55]
+
+
+#Getting medians for educ, re74, and re75 for the treatment unit
+
+educ_median<-median(lalonde_treat$educ)
+
+re74_median<-median(lalonde_treat$re74)
+
+re75_median<-median(lalonde_treat$re75)
+
+
+library(Hmisc)
+
+#Simulating the coefficients
+
+set.seed(895)
+
+lalondesim<-sim(lalonde_m1, n.sim = 10000)
+
+lalonde_sim_coef <- lalondesim@coef
+
+
+# Simulating for each age with educ, re74, and re75 at their medians
+
+
+age_intervals<- matrix(NaN,nrow=10000,ncol=39)
+
+for(age in c(17:55)) {
+  
+  for(i in 1:10000) 
+    
+  {
+    
+    med_re78 <- sum(lalonde_sim_coef[i,]*(c(1, age,educ_median,re74_median,re75_median,educ_median*re74_median,educ_median*re75_median, age*re74_median, age*re75_median,age*age, re74_median*re75_median)))
+age_intervals[i, age-16] <-med_re78
+
+
+  }
+  
+}
+
+
+conf_intervals_0 <- apply(age_intervals,2, quantile, probs = c(0.025,0.975))
+
+
+conf_intervals_0
+median_lalonde <- 0
+
+for (i in 1:39) {
+  
+  median_lalonde [i] <- median(age_intervals[i,])
+  
+}
+
+median_lalonde 
+conf_treated <- data.frame( "Age" = 17:55, "2.5%" = conf_intervals_0[1,], "Median" = median_lalonde , "97.5%" = conf_intervals_0[2,])
+
+print (conf_treated)
+
+
+
+
+setwd("C:\\Users\\jakie\\OneDrive\\Documents\\R_working_directory")
+foo1 <- read.csv("C:\\Users\\jakie\\OneDrive\\Documents\\R_working_directory\\afterschool.csv")
+dim(foo1)
+head(foo1)
+
+unique(foo1$SG_MATH_PROF)
+unique(foo1$PRIOR_MATH_SCORE)
+unique(foo1$SCHOOL)
+unique(foo1$TREATMENT)
+
+
+
+levels(foo1$SG_MATH_PROF) <- c(0, 1, 2)
+
+# Regressionn_
+lm_mathscrore <- lm(MATH_SCORE  ~ SG_MATH_PROF, data=foo1)
+summary(lm_mathscrore)
+
+
+
+
+n = 1000
+bootstrap_Outcomes <- rep(0, n)
+for (i in 1:n) {
+  indexes <- sample(nrow(foo1), nrow(foo1), replace=TRUE)
+  boots <- foo1[indexes, ]
+  boot_reg <- lm(MATH_SCORE  ~ SG_MATH_PROF, data = boots)
+  bootstrap_Outcomes[i] <- summary(boot_reg )$coef[2, 1]
+}
+
+Confint_bootstrap <- quantile(bootstrap_Outcomes, prob=c(0.025, 0.975))
+confint(lm_mathscrore)
+confint_Normal_regression <- confint(lm_mathscrore)[2, ]
+
+comparison <- data.frame(Confint_bootstrap, confint_Normal_regression)
+comparison
+
+
+
+
+
+
+#Question 4
+
+Squared_r <- function(actual, predicted) {
+  
+  R_1 <- 1- (sum((observed - mean(observed))**2)/ sum((observed - predicted)**2))
+  
+  return(R_1)
+  
+}
+
+
+
+m1<-m(MATH_SCORE  ~ SG_MATH_PROF, data=foo1)
+
+prediction<-predict(m1)
+
+prediction
+
+
+
+Squared_r_1<-Squared_r(foo1$SG_MATH_PROF,prediction)
+
+squared_r_2<-summary(m1)$r.squared
+
+squared_r_2
+
+
+
+table(Squared_r_1, squared_r_2)
+
+
+
+
+setwd("C:\\Users\\jakie\\OneDrive\\Documents\\R_working_directory")
+nsw <- read.csv("C:\\Users\\jakie\\OneDrive\\Documents\\R_working_directory\\nsw.csv")
+dim(nsw)
+head(nsw)
+set.seed(12345)
+test_set_rows <- sample(1:length(nsw$age), 2000, replace = FALSE) 
+training_set_rows <- nsw[-test_set_rows]
+
+m1 <- glm(treat ~ age + education + black + hispanic + married + nodegree + re75,
+                       data= training_set_rows)
+m2 <- glm(treat ~ age + education + black + hispanic + married + nodegree,
+         data= training_set_rows)
+
+m3 <- glm(treat ~ age + education + married + nodegree + re75,
+         data= training_set_rows)
+m4 <- lm(treat ~ age + education + black + hispanic + married,
+         data= training_set_rows)
+m5 <- lm(treat ~ age + education + black + hispanic + nodegree + re75,
+         data= training_set_rows)
+
+
+
+cv.m1 <- cv.glm(training_set_rows, m1)
+cv.m2 <- cv.glm(training_set_rows, m2)
+
+cv.m1$delta[1]  
+cv.m2$delta[1] 
